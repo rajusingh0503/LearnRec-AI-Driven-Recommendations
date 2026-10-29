@@ -1,0 +1,82 @@
+version: '3.8'
+
+services:
+  # 1. MySQL Database Service
+  mysql-db:
+    image: mysql:8.0
+    container_name: learnrec-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: 
+      MYSQL_DATABASE: learnrec_db
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - learnrec-net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 2. Python FastAPI AI Recommendation Engine
+  ai-service:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+    container_name: learnrec-ai-service
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - INTERNAL_API_KEY=learnrec-internal-secret-token
+    networks:
+      - learnrec-net
+
+  # 3. Java Spring Boot Backend Service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: learnrec-backend
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-db:3306/learnrec_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=password
+      - APP_AI_SERVICE_BASE_URL=http://ai-service:8000
+    depends_on:
+      mysql-db:
+        condition: service_healthy
+      ai-service:
+        condition: service_started
+    networks:
+      - learnrec-net
+
+  # 4. React Vite Frontend
+  frontend:
+    image: node:20-alpine
+    container_name: learnrec-frontend
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+    ports:
+      - "5173:5173"
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    depends_on:
+      - backend
+    networks:
+      - learnrec-net
+
+networks:
+  learnrec-net:
+    driver: bridge
+
+volumes:
+  mysql_data:
+    driver: local
