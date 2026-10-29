@@ -1,3 +1,6 @@
+LINK : https://learn-rec-ai-driven-recommendations.vercel.app/
+
+
 # LearnRec — AI-Based Personalized Learning Recommendation System
 
 LearnRec is a full-stack, distributed AI recommendation platform designed to help learners discover relevant educational content—including Courses, Books, Tutorials, Coding Problems, and Learning Resources—using Hybrid Machine Learning (Content-Based + Collaborative Filtering).
